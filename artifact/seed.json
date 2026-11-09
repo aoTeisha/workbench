@@ -1,0 +1,290 @@
+[
+  {
+    "op": "set",
+    "collection": "projects",
+    "doc_id": "demo",
+    "data": {
+      "name": "Demo",
+      "slug": "demo",
+      "status": "paused",
+      "repo": "C:\\Users\\you\\lab\\empty",
+      "color": "#E0A458",
+      "body": "Sample cards in every status so the UI can be checked without real work.\nPaused: the worker never touches it.",
+      "created": "2026-11-03"
+    }
+  },
+  {
+    "op": "set",
+    "collection": "cards",
+    "doc_id": "demo-001",
+    "data": {
+      "project": "demo",
+      "id": 1,
+      "title": "Pick a logo",
+      "status": "backlog",
+      "priority": 3,
+      "created": "2026-10-28",
+      "updated": "2026-10-28T09:00",
+      "branch": "",
+      "goal": "Decide on a wordmark vs an icon for the demo app.",
+      "acceptance": [],
+      "question": "Wordmark only, icon only, or both? No acceptance criteria yet, so this stays in backlog.",
+      "answer": "",
+      "result": "",
+      "log": []
+    }
+  },
+  {
+    "op": "set",
+    "collection": "cards",
+    "doc_id": "demo-002",
+    "data": {
+      "project": "demo",
+      "id": 2,
+      "title": "Add health endpoint",
+      "status": "ready",
+      "priority": 1,
+      "created": "2026-11-01",
+      "updated": "2026-11-01T18:20",
+      "branch": "",
+      "goal": "GET /health returns 200 and the git sha so uptime checks have something to hit.",
+      "acceptance": [
+        {
+          "text": "`curl localhost:3000/health` returns `{\"ok\":true,\"sha\":\"...\"}`",
+          "done": false
+        },
+        {
+          "text": "Test covers the 200 path",
+          "done": false
+        }
+      ],
+      "question": "",
+      "answer": "",
+      "result": "",
+      "log": []
+    }
+  },
+  {
+    "op": "set",
+    "collection": "cards",
+    "doc_id": "demo-003",
+    "data": {
+      "project": "demo",
+      "id": 3,
+      "title": "Paginate the users list",
+      "status": "doing",
+      "priority": 2,
+      "created": "2026-11-01",
+      "updated": "2026-11-02T23:41",
+      "branch": "card-003-paginate-the-users-list",
+      "goal": "Users list loads 50k rows at once. Add cursor pagination, 50 per page.",
+      "acceptance": [
+        {
+          "text": "API accepts `?after=<id>&limit=50`",
+          "done": true
+        },
+        {
+          "text": "UI shows Load more",
+          "done": false
+        },
+        {
+          "text": "Test for last page returns empty `next`",
+          "done": false
+        }
+      ],
+      "question": "",
+      "answer": "",
+      "result": "",
+      "log": [
+        {
+          "at": "2026-11-02T23:41",
+          "who": "worker",
+          "text": "started, worktree .worktrees/card-003"
+        }
+      ]
+    }
+  },
+  {
+    "op": "set",
+    "collection": "cards",
+    "doc_id": "demo-004",
+    "data": {
+      "project": "demo",
+      "id": 4,
+      "title": "Choose auth library",
+      "status": "blocked",
+      "priority": 1,
+      "created": "2026-10-30",
+      "updated": "2026-11-02T22:10",
+      "branch": "card-004-choose-auth-library",
+      "goal": "Login needs JWT issuing and verification. Pick the library and wire a login endpoint.",
+      "acceptance": [
+        {
+          "text": "POST /login returns a JWT for valid credentials",
+          "done": false
+        },
+        {
+          "text": "401 on bad credentials, both covered by tests",
+          "done": false
+        }
+      ],
+      "question": "Which JWT library? The repo has none installed and project.md does not say.\n- A) `jose` (recommended) — zero deps, maintained, Web Crypto based\n- B) `jsonwebtoken` — most common, older API\n- C) Hand-roll HS256 with node:crypto — no dependency, ~40 lines\nIf unanswered, the card waits. Nothing was changed in the repo.",
+      "answer": "",
+      "result": "",
+      "log": [
+        {
+          "at": "2026-11-02T21:30",
+          "who": "worker",
+          "text": "started, worktree .worktrees/card-004"
+        },
+        {
+          "at": "2026-11-02T22:10",
+          "who": "worker",
+          "text": "blocked — which JWT library"
+        }
+      ]
+    }
+  },
+  {
+    "op": "set",
+    "collection": "cards",
+    "doc_id": "demo-005",
+    "data": {
+      "project": "demo",
+      "id": 5,
+      "title": "Delete stale sessions nightly",
+      "status": "blocked",
+      "priority": 2,
+      "created": "2026-10-31",
+      "updated": "2026-11-03T01:05",
+      "branch": "card-005-delete-stale-sessions-nightly",
+      "goal": "Sessions table grows forever. Add a nightly job that removes rows older than N days.",
+      "acceptance": [
+        {
+          "text": "Job runs from the existing cron runner",
+          "done": true
+        },
+        {
+          "text": "Old rows removed, recent rows kept, covered by a test",
+          "done": false
+        }
+      ],
+      "question": "How old is stale? This deletes data, so I did not guess.\n- A) 30 days (recommended) — matches the refresh-token lifetime in config\n- B) 7 days\n- C) 90 days\nThe job is written with a `STALE_DAYS` constant; only the value is missing.",
+      "answer": "",
+      "result": "",
+      "log": [
+        {
+          "at": "2026-11-03T00:20",
+          "who": "worker",
+          "text": "started, worktree .worktrees/card-005"
+        },
+        {
+          "at": "2026-11-03T01:05",
+          "who": "worker",
+          "text": "blocked — retention period"
+        }
+      ]
+    }
+  },
+  {
+    "op": "set",
+    "collection": "cards",
+    "doc_id": "demo-006",
+    "data": {
+      "project": "demo",
+      "id": 6,
+      "title": "Fix flaky date test",
+      "status": "review",
+      "priority": 2,
+      "created": "2026-10-29",
+      "updated": "2026-11-02T20:12",
+      "branch": "card-006-fix-flaky-date-test",
+      "goal": "`formatRelative` test fails around midnight because it uses the real clock.",
+      "acceptance": [
+        {
+          "text": "Test injects a fixed clock",
+          "done": true
+        },
+        {
+          "text": "20 consecutive runs pass",
+          "done": true
+        }
+      ],
+      "question": "",
+      "answer": "",
+      "result": "Changed `src/time.js` to accept `now` as a parameter (default `Date.now`), and\n`test/time.test.js` passes `new Date('2026-01-01T23:59:59')`.\nVerify: `npm test` on branch `card-006-fix-flaky-date-test`; ran it 20x in a loop, all green.\nNothing else touched.",
+      "log": [
+        {
+          "at": "2026-11-02T19:30",
+          "who": "worker",
+          "text": "started, worktree .worktrees/card-006"
+        },
+        {
+          "at": "2026-11-02T20:12",
+          "who": "worker",
+          "text": "review"
+        }
+      ]
+    }
+  },
+  {
+    "op": "set",
+    "collection": "cards",
+    "doc_id": "demo-007",
+    "data": {
+      "project": "demo",
+      "id": 7,
+      "title": "Set up ESLint",
+      "status": "done",
+      "priority": 3,
+      "created": "2026-10-27",
+      "updated": "2026-10-28T08:15",
+      "branch": "card-007-set-up-eslint",
+      "goal": "Flat config ESLint with the recommended rules.",
+      "acceptance": [
+        {
+          "text": "`npm run lint` passes on main",
+          "done": true
+        },
+        {
+          "text": "CI runs it",
+          "done": true
+        }
+      ],
+      "question": "",
+      "answer": "",
+      "result": "Added `eslint.config.js`, `lint` script, and a lint step in `ci.yml`.",
+      "log": [
+        {
+          "at": "2026-10-28T07:00",
+          "who": "worker",
+          "text": "started"
+        },
+        {
+          "at": "2026-10-28T08:15",
+          "who": "worker",
+          "text": "review"
+        },
+        {
+          "at": "2026-10-28T09:30",
+          "who": "you",
+          "text": "accepted"
+        }
+      ]
+    }
+  },
+  {
+    "op": "set",
+    "collection": "projects",
+    "doc_id": "workbench",
+    "data": {
+      "name": "Workbench",
+      "slug": "workbench",
+      "status": "active",
+      "repo": "C:\\Users\\you\\workbench",
+      "color": "#5B8DEF",
+      "body": "The board app itself. Node 22 stdlib only, vanilla front end, no build step.\nRun: `node app/server.mjs` then open http://localhost:4242.\nTests: `node --test`.\nConventions: ES modules, no dependencies, load-bearing comments only.",
+      "created": "2026-11-03"
+    }
+  }
+]

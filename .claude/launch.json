@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "harness",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["-e", "const fs=require('fs'),p=require('path');require('http').createServer((q,r)=>{const u=decodeURIComponent(q.url.split('?')[0]);const f=p.join('artifact',u==='/'?'harness.html':u);fs.readFile(f,(e,b)=>{r.writeHead(e?404:200,{'content-type':f.endsWith('.html')?'text/html':f.endsWith('.css')?'text/css':''});r.end(b)})}).listen(4243)"],
+      "port": 4243
+    }
+  ]
+}

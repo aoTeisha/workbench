@@ -1,0 +1,17 @@
+# This machine's board data and helper state
+data/
+host/runs/
+host/keep-awake.pid
+host/keep-awake.log
+host/keep-awake.interval
+host/keep-awake.on
+host/last-url.log
+host/Workbench.exe
+
+# Local only: design history, card worktrees, the preview build
+docs/plans/
+.worktrees/
+.claude/worktrees/
+artifact/harness.html
+artifact/feed-sample.json
+undefined/
