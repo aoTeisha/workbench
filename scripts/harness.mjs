@@ -64,6 +64,8 @@ const mock = `
   window.__dbRev = 1;
   window.__hostCalls = [];
   window.__docs = docs;
+  // The helper writes where Workbench lives (machine/host) when it starts; Plan in depth needs it.
+  if (!docs.has('machine/host')) docs.set('machine/host', { root: 'C:\\\\Users\\\\you\\\\workbench' });
   // A made-up calendar: the same few meetings each weekday, shifted a little per day. Times are read as local.
   const calendar = input => {
     const day = String(input?.afterDateTime || '').slice(0, 10);
@@ -87,7 +89,16 @@ const mock = `
         return calendar(input);
       }
       if (server !== HOST) throw { code: 'server_not_connected', server };
-      window.__hostCalls.push({ tool, input, activation: navigator.userActivation?.isActive ?? null });
+      // ?limit=30 copies the desktop app's per-board budget: a bucket of N calls a minute, refused with rate_limited.
+      const limit = +new URLSearchParams(location.search).get('limit');
+      if (limit) {
+        const b = window.__bucket ||= { tokens: limit, at: Date.now(), refused: 0 };
+        b.tokens = Math.min(limit, b.tokens + (Date.now() - b.at) * limit / 60000);
+        b.at = Date.now();
+        if (b.tokens < 1) { b.refused++; throw { code: 'rate_limited', message: 'Host tool rate limit exceeded — try again shortly.', retryAfterMs: Math.ceil((1 - b.tokens) * 60000 / limit) }; }
+        b.tokens--;
+      }
+      window.__hostCalls.push({ tool, input, activation: navigator.userActivation?.isActive ?? null, at: Date.now() });
       const mode = window.__hostMode;
       if (mode === 'not_connected' || (mode === 'cancelled' && !tool.startsWith('db_'))) throw { code: mode === 'cancelled' ? 'cancelled' : 'server_not_connected' };
       // The PC's board documents (host/db.mjs): cards, projects and machine/* from the same in-memory docs.
@@ -109,6 +120,10 @@ const mock = `
       if (tool === 'card_start' && mode === 'waiting') return { content: [], payload: { ok: true, waiting: true, behind: 'Demo: Add health endpoint', session: input.session || '' } };
       if (tool === 'card_start') return { content: [], payload: { ok: true, session: input.session || '11111111-2222-3333-4444-555555555555', resumed: !!input.session } };
       if (tool === 'card_pause') return { content: [], payload: { ok: true, paused: !!input.session || mode === 'night', session: input.session, next: mode === 'night' ? 'demo-002' : '' } };
+      // A project's knowledge files: window.__projectDocs overrides the list, window.__docText maps a path to its text.
+      if (tool === 'project_docs') return { content: [], payload: input.file
+        ? { ok: true, path: input.file, text: (window.__docText || {})[input.file] ?? '# ' + input.file + '\\n\\n## Decisions so far\\n\\n- Rail, not columns.\\n' }
+        : { ok: true, folder: input.folder, ...(window.__projectDocs || { files: [{ path: 'CONTEXT.md', title: 'Glossary', at: '' }, { path: '.scratch/rail/map.md', title: 'Map: Roadmap rail', at: '' }], maps: [{ path: '.scratch/rail/map.md', decided: 1, total: 3 }] }) } };
       if (tool === 'open_file') return { content: [], payload: window.__openFail ? { ok: false, error: 'failed', message: window.__openFail } : { ok: true, opened: input.path } };
       if (tool === 'card_open') return { content: [], payload: { ok: true, opened: '11111111' } };
       if (tool === 'card_sessions') return { content: [], payload: { ok: true, cards: window.__sessions || [], defaults: { model: 'fable', effort: 'high', efforts: { haiku: 'medium', sonnet: 'medium', opus: 'xhigh', fable: 'high' } } } };
@@ -129,7 +144,10 @@ const mock = `
     },
     invalidate: async () => {},
   };
-  window.claude = { use: async name => ({ db, user, mcp })[name] ?? null };
+  // ?sample turns on Claude on this page (Where are we, + Card drafts); window.__sampleText is what it answers.
+  const sample = Object.assign(async () => ({ text: window.__sampleText || 'Done lately: the checker and usage per card shipped.\\nNow: Check phase, the Checked row is next.\\nWaiting on you: nothing.' }), { json: async () => ({}) });
+  const sampleOn = new URLSearchParams(location.search).has('sample');
+  window.claude = { use: async name => ({ db, user, mcp, ...(sampleOn && { sample }) })[name] ?? null };
 })();
 </script>`;
 

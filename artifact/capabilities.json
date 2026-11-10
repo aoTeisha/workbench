@@ -7,7 +7,7 @@
       { "server": "Microsoft 365", "tools": ["get_me", "outlook_calendar_search", "outlook_email_search", "outlook_create_reply_draft", "outlook_create_reply_all_draft"] },
       { "server": "Slack", "tools": ["slack_read_user_profile", "slack_search_public_and_private", "slack_search_channels", "slack_list_user_channels", "slack_send_message"] },
       { "server": "Atlassian MCP", "tools": ["getAccessibleAtlassianResources", "searchJiraIssuesUsingJql"] },
-      { "server": "host:workbench-host", "tools": ["card_start", "card_pause", "card_open", "card_sessions", "open_file", "usage", "keep_awake_start", "keep_awake_stop", "db_read", "db_write", "db_delete"] }
+      { "server": "host:workbench-host", "tools": ["card_start", "card_pause", "card_open", "card_sessions", "open_file", "project_docs", "open_link", "usage", "keep_awake_start", "keep_awake_stop", "db_read", "db_write", "db_delete"] }
     ]
   }
 }

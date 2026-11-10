@@ -17,12 +17,22 @@ then read and write them with `node <workbench root>/host/db.mjs` (a JSON file p
 
 ## The plan
 
-Review cards show where a card sits in the plan, so write the plan on the project (`db.mjs update projects/<slug>`,
-pinned with `--if-version`) whenever the conversation agreed or changed one:
-`plan: { why, phases: [{ name, note }], text }`.
-- `why`: one sentence, why the project exists, in the user's words.
-- `phases`: the plan's stages in order, 2-6, each `name` 1-3 words ("Prepare", "Build cards", "First live trial").
+Review cards show where a card sits in the plan, and the project page draws every phase as its roadmap, so write the
+plan on the project (`db.mjs update projects/<slug>`, pinned with `--if-version`) whenever the conversation agreed or
+changed one: `plan: { why, phases: [{ name, note, done?, map? }], text }`.
+- `why`: one sentence, why the project exists, in the user's words. Keep the existing one unless the user changed it.
+- `phases`: the whole project's roadmap in order. This conversation's stages are 2-6 new phases, each `name` 1-3 words
+  ("Prepare", "Build cards", "First live trial"), unique across the project's phases (a repeat gets the effort's word:
+  "Prepare sync").
 - `text`: the agreed plan in full, as markdown. Workers check "this differs from the plan" against it.
+
+A project that already has a plan keeps it. Read `plan` first, then:
+- Add the new phases at the end, unless the user said where. Never remove or rename a phase that has cards, finished
+  or not: their plan strip finds the phase by name.
+- Add this effort to `text` as its own `## <effort>` section; leave the other sections as they are.
+- A phase with `map` is a wayfinder map still being decided ("Find the way: …"). When this run turns that map into
+  build phases, put them where the map phase was and drop the map phase.
+- `done` (a date) only marks past phases written without cards; never set it on a phase you add here.
 
 ## Cards
 

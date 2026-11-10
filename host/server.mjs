@@ -9,9 +9,10 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { cardOpen, cardPause, cardSessions, cardStart } from './card.mjs';
-import { rev, snapshot, write } from './db.mjs';
+import { get, rev, snapshot, write } from './db.mjs';
 import { startNightTimer } from './night.mjs';
 import { openFile } from './open-file.mjs';
+import { projectDocs } from './project-docs.mjs';
 import { usage } from './usage.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -80,8 +81,9 @@ function stop() {
   return { running: false, pid: null, wanted: false };
 }
 
-// Hands a link to the OS so the registered app opens it (slack://, ms-outlook:, https://). Only these schemes.
-const OPENABLE = /^(https?:\/\/|slack:\/\/|ms-outlook:|mailto:)/i;
+// Hands a link to the OS so the registered app opens it (slack://, ms-outlook:, https://). Only these schemes, plus the
+// desktop app's new-chat link for Plan in depth: the app does not open claude:// links from inside an artifact page.
+const OPENABLE = /^(https?:\/\/|slack:\/\/|ms-outlook:|mailto:|claude:\/\/code\/new\?)/i;
 function openLink({ url } = {}) {
   if (typeof url !== 'string' || !OPENABLE.test(url) || /[\r\n"]/.test(url)) throw new Error('refused: not an openable link');
   // The URL goes in as data, never as code: inside a PowerShell string, $(...) would run.
@@ -112,12 +114,15 @@ const TOOLS = [
     annotations: { readOnlyHint: false, destructiveHint: false } },
   { name: 'card_sessions', description: 'Every card that has a Claude session on this PC: { cards: [{ card, title, session, state: working|blocked|done|stopped|waiting, behind, model, effort, at, why? }], defaults: { model, effort } }. why: a blocked or done session\'s last words, one line. A card\'s model and effort are what its session was started on, "" for the defaults; defaults is what "" means in Claude Code settings.',
     inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } },
-  { name: 'open_link', description: 'Open a slack://, ms-outlook: or https:// link with the app registered for it on this machine.',
+  { name: 'open_link', description: 'Open a slack://, ms-outlook:, https:// or claude://code/new? link with the app registered for it on this machine.',
     inputSchema: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] },
     annotations: { readOnlyHint: false, destructiveHint: false } },
   { name: 'open_file', description: 'Open a document (md, txt, csv, pdf, docx, xlsx, pptx, png, jpg) that lies inside a board project\'s folder: .md and .txt in a text editor (Notepad on Windows), the rest with their default app. Returns { opened }.',
     inputSchema: { type: 'object', properties: { path: { type: 'string', description: 'Absolute path' } }, required: ['path'] },
     annotations: { readOnlyHint: false, destructiveHint: false } },
+  { name: 'project_docs', description: 'A board project\'s knowledge files (read-only, .md, inside its folder only). Without file: { folder, files: [{ path, title, at }], maps: [{ path, decided, total }] } for CONTEXT.md, docs/adr/*.md and wayfinder maps (.scratch/<effort>/map.md; decided = issues with Status: resolved). With file (relative to the folder): { path, text }.',
+    inputSchema: { type: 'object', properties: { folder: { type: 'string', description: 'The project folder, absolute' }, file: { type: 'string', description: 'A .md file, relative to the folder' } }, required: ['folder'] },
+    annotations: { readOnlyHint: true } },
   { name: 'keep_awake_status', description: 'Is keep awake (the PC must not sleep) running, and is it switched on?', inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true } },
   { name: 'keep_awake_start', description: 'Keep the PC from sleeping (a "don\'t sleep" request to the OS; the screen still locks). Stays on, also after the desktop app restarts, until keep_awake_stop.', inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: false, destructiveHint: false } },
   { name: 'keep_awake_stop', description: 'Let the PC sleep again as usual.', inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: false, destructiveHint: false } },
@@ -141,7 +146,8 @@ const dbWrite = dbCall(({ path: p, op, data, ifVersion }) => (op === 'set' || op
 const dbDelete = dbCall(({ path: p }) => write({ op: 'delete', path: p }));
 
 // usage() takes test hooks as options: the page's arguments must never reach them.
-const HANDLERS = { card_start: cardStart, card_pause: cardPause, card_open: cardOpen, card_sessions: cardSessions, open_link: openLink, open_file: input => openFile(input, { folders: snapshot().docs.projects.map(d => d.data?.repo) }), keep_awake_status: status, keep_awake_start: start, keep_awake_stop: stop, usage: () => usage(), db_read: dbRead, db_write: dbWrite, db_delete: dbDelete };
+const projectFolders = () => snapshot().docs.projects.map(d => d.data?.repo);
+const HANDLERS = { card_start: cardStart, card_pause: cardPause, card_open: cardOpen, card_sessions: cardSessions, open_link: openLink, open_file: input => openFile(input, { folders: projectFolders() }), project_docs: input => { try { return { ok: true, ...projectDocs(input, { folders: projectFolders() }) }; } catch (e) { return { ok: false, error: 'refused', message: e.message }; } }, keep_awake_status: status, keep_awake_start: start, keep_awake_stop: stop, usage: () => usage(), db_read: dbRead, db_write: dbWrite, db_delete: dbDelete };
 
 // `node host/server.mjs --url "workbench://keep-awake?interval=60"`: Windows runs this for workbench:// links
 // clicked in a board opened in Chrome (registered by register-protocol.ps1). Nothing else depends on it.
@@ -164,6 +170,8 @@ if (urlArg > 0) {
 // at once can each launch one; both only hold the same request.
 setTimeout(() => { try { if (status().wanted && !status().running) start(); } catch { /* the board shows it off */ } }, 3000);
 startNightTimer();
+// The page cannot know where this Workbench folder is (each person clones it somewhere); the Plan in depth chat link needs it.
+try { const root = path.dirname(here); if (get('machine/host')?.data?.root !== root) write({ op: 'set', path: 'machine/host', data: { root } }); } catch { /* the page then hides Plan in depth */ }
 const send = msg => process.stdout.write(JSON.stringify(msg) + '\n');
 const reply = (id, result) => send({ jsonrpc: '2.0', id, result });
 const fail = (id, code, message) => send({ jsonrpc: '2.0', id, error: { code, message } });
@@ -174,7 +182,7 @@ readline.createInterface({ input: process.stdin }).on('line', line => {
   try { msg = JSON.parse(line.replace(/^﻿/, '')); } catch { return; }
   const { id, method, params = {} } = msg;
   if (method === 'initialize') {
-    reply(id, { protocolVersion: params.protocolVersion || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: 'workbench-host', version: '0.3.0' } });
+    reply(id, { protocolVersion: params.protocolVersion || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: 'workbench-host', version: '0.4.0' } });
   } else if (method === 'ping') {
     reply(id, {});
   } else if (method === 'tools/list') {

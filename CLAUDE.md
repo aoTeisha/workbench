@@ -9,8 +9,10 @@ them with `node <workbench root>/host/db.mjs` (usage at its top): `get cards/<ke
 for them: a session on another claude.ai account cannot reach the artifact's database, and the board does not read it.
 Write a patch to a JSON file and pass `--file` (inline JSON breaks on Windows quoting). Errors print JSON and exit 1.
 
-The board page (the artifact) reads these files through the helper (`db_read`, every 3 s) and writes them on
-the user's clicks (`db_write`, `db_delete`), so it shows cards only inside the Claude desktop app. The artifact's own
+The board page (the artifact) reads these files through the helper (`db_read`, every 5 s) and writes them on
+the user's clicks (`db_write`, `db_delete`), so it shows cards only inside the Claude desktop app. The app allows each
+board 30 helper calls a minute (measured 2026-11-10 in the app's code); the page's own reads give way when fewer than 13
+are left, and a refused click is retried, so never add a faster poll. The artifact's own
 database keeps only what the page writes for itself: feeds, triage, handled items, feedback and per-user settings,
 plus `config/board` (below).
 
@@ -30,13 +32,19 @@ the page asks Microsoft 365 (`get_me`), Slack (`slack_read_user_profile`) and At
 ## Documents
 
 - `projects/<slug>`: `name, slug, status (active|paused|archived), repo, color, body, created`, and `plan`
-  (`{ why, phases: [{ name, note }], text }`, written by `/plan-cards`).
+  (`{ why, phases: [{ name, note, done?, map? }], text }`, written by `/plan-cards`). `phases` is the whole project's
+  roadmap: `/plan-cards` adds phases and never drops one that has cards. The board's roadmap adds a point (a phase with a
+  name and note, after a chosen phase) and removes only an empty hand-made one; it writes the whole `plan` object back. `done` (a date) marks a past
+  phase backfilled without cards; `map` (a path inside the folder, `.scratch/<effort>/map.md`) marks a wayfinder map
+  still being decided ("Find the way: …"), replaced by build phases when its cards are made. Where are we answers live in the board's per-user settings (`summaries`), not here. Design: `docs/plans/2026-11-09-project-roadmap-design.md`.
   `repo` is the project's folder: any directory, git or not. Several projects may share one.
   `account`: the Workbench account its card sessions run as (`""` = `workbench`). Each account is its own Claude Code
   settings folder `~/.claude-wb-<name>` (`CLAUDE_CONFIG_DIR`), signed in once with `node host/accounts.mjs add <name>`;
   `node host/accounts.mjs status` lists them. The night check and the usage meter run as `workbench`. Until an account
   folder exists the helper uses `~/.claude` (the CLI's own login, which a terminal `/login` can change). A card whose
   account changed starts a new conversation. Any account works: card sessions use the files above, not claude.ai.
+- `machine/host`: `{ root }`, this Workbench folder, written by the helper when it starts (the Plan in depth link
+  points the chat at `<root>/docs/plan-in-depth.md`).
 - `machine/folders`: `{ at, host, items: [{ name, path, git }] }`, the folders the New project form offers.
   Written by `node host/scan-folders.mjs --save` (the page has no disk access).
 - `cards/<slug>-<NNN>`: `project, id, title, status, priority (1-3), created, updated, branch,
@@ -49,6 +57,7 @@ the page asks Microsoft 365 (`get_me`), Slack (`slack_read_user_profile`) and At
   `model` (`"" | haiku | sonnet | opus | fable`) and `effort` (`"" | low | medium | high | xhigh | max`): what the card's
   session runs on; `""` is the board's default for cards (`machine/cards`), else the user's default from Claude Code
   settings. New cards leave both `""` (the board's Plan and `/plan-cards` included); the user changes one on the card (Runs on).
+  `jira` (`{ key, url }`): the card's Jira Subtask, written by the Plan in depth chat; shown in the card's details.
 - `machine/night`: `{ cap, at }`, the night shift's limit: past `cap` percent of the week's usage (all models) the
   night check starts no new card. `null` or missing means no limit. Written by the board's usage pane.
 - `machine/cards`: `{ model, effort, ultracode, at }`, what a card that leaves `model` or `effort` at `""` runs on,
@@ -82,7 +91,9 @@ Doing resumes that same session. The board must be open in the Claude desktop ap
 `card_start`, `card_pause`, `card_open` (the session in a terminal window, `claude attach`: Windows Terminal, or
 Terminal.app on macOS), `open_file` (a card's
 `handover.output`: documents inside a project's folder only, `host/open-file.mjs`) and
-`card_sessions` (read-only: each card's session state, shown on the board). In a browser tab the board shows no
+`card_sessions` (read-only: each card's session state, shown on the board) and `project_docs` (read-only: a project
+folder's `CONTEXT.md`, `docs/adr/*.md` and wayfinder maps with their resolved counts, `host/project-docs.mjs`), and
+`open_link` for Plan in depth's `claude://code/new?…` link (the app ignores claude:// links fired inside the page). In a browser tab the board shows no
 cards. The board writes the move first, then calls `card_start` with `revert`; a start that fails is moved back by the
 helper. The helper writes the session id into the card's `session` and keeps its own record in `host/runs/<card>.json`. The session works the card with the work procedure and reports on the card.
 It is not in the desktop app's left pane (an app-held session makes every resume a copy); Open on the card shows it.
@@ -119,3 +130,5 @@ must see has to be written from outside it (the script does this through WMI).
 - `/setup` — first run on a machine: your own board, the helper, your settings.
 - `/plan-cards <slug>` — day: turn a planning conversation into cards.
 - `/work` — the card procedure every card session follows; its last section is the night dispatch.
+- Plan in depth — the project page opens a desktop chat in the project's folder running
+  `/mattpocock-skills:wayfinder` (installed by `/setup`); `docs/plan-in-depth.md` is what that chat follows.

@@ -60,20 +60,29 @@ Nobody's identity goes here: the page asks each connector who is viewing.
    `~/Library/Application Support/Claude/claude_desktop_config.json` (the app's Settings > Developer > Edit Config
    opens the same file). Read it, then add under `mcpServers` (keep everything else as it is):
    `"workbench-host": { "command": "<node path>", "args": ["<server.mjs path>"] }`.
-3. Tell the user to quit the desktop app fully (Windows: tray icon > Quit; macOS: Cmd+Q) and reopen it. The helper
-   starts with the app; a changed `host/server.mjs` or `host/card.mjs` needs the same restart.
-4. Card sessions run with `claude --bg` in each project's folder, which needs a folder Claude Code trusts: ask the
+3. Plan in depth (the project page and the New project form) opens a chat that runs wayfinder from Matt Pocock's
+   skills plugin (MIT, github.com/mattpocock/skills). Ask with AskUserQuestion: "Install Matt Pocock's skills? Plan in
+   depth uses wayfinder, grilling, domain-modeling, research and prototype." Install / Skip. Skip if
+   `claude plugin list` already shows `mattpocock-skills`. On Install run
+   `claude plugin marketplace add https://github.com/mattpocock/skills.git` then
+   `claude plugin install mattpocock-skills@mattpocock -s user`, and tell the user:
+   "Added Matt Pocock's skills: wayfinder, grilling, domain-modeling, research, prototype (and the rest of that
+   plugin). Plan in depth uses them." On Skip, say Plan in depth will ask for them.
+4. Tell the user to quit the desktop app fully (Windows: tray icon > Quit; macOS: Cmd+Q) and reopen it. The helper
+   starts with the app (it also picks up a new plugin then); a changed `host/server.mjs` or `host/card.mjs` needs
+   the same restart.
+5. Card sessions run with `claude --bg` in each project's folder, which needs a folder Claude Code trusts: ask the
    user to run `claude` once in each project folder they will put on the board and accept the trust prompt.
-5. Optional: a separate Claude login for card sessions, `node host/accounts.mjs add workbench` (else they use this
+6. Optional: a separate Claude login for card sessions, `node host/accounts.mjs add workbench` (else they use this
    machine's normal Claude Code login). `node host/accounts.mjs status` shows them.
-6. `node host/scan-folders.mjs --save` fills the folder list the New project form offers.
+7. `node host/scan-folders.mjs --save` fills the folder list the New project form offers.
 
 ## 6. Check it works
 
 Ask the user to open the board URL in the desktop app (not a browser tab: cards need the app). Expect:
 - the bar shows today's meetings and the usage meter (the meter means the helper answered);
 - the widgets fill, or name the connector to add;
-- Projects is empty and `+ Project` offers folders from step 5.6.
+- Projects is empty and `+ Project` offers folders from step 5.7.
 
 On macOS, also ask them to try once: Keep awake on in the cog menu (`caffeinate` runs: `pgrep caffeinate`), and Open
 session on a card in Doing (Terminal opens on the card's session). Report anything that fails with its exact message.
